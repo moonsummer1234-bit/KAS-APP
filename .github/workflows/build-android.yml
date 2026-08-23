@@ -1,0 +1,72 @@
+name: Build Signed Android App Bundle
+
+# Jalan otomatis tiap kali ada push ke branch main, dan juga bisa dijalankan manual
+# lewat tab "Actions" di GitHub (tombol "Run workflow").
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependency npm
+        run: npm install
+
+      - name: Sync Capacitor -> Android
+        run: npx cap sync android
+
+      - name: Siapkan keystore dari GitHub Secret
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release-key.jks
+
+      - name: Build Signed App Bundle (.aab)
+        working-directory: android
+        env:
+          KEYSTORE_PATH: app/release-key.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bundleRelease
+
+      - name: Build Signed APK (opsional, untuk uji coba manual di HP)
+        working-directory: android
+        env:
+          KEYSTORE_PATH: app/release-key.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - name: Hapus file keystore sementara
+        if: always()
+        run: rm -f android/app/release-key.jks
+
+      - name: Upload hasil AAB (untuk diunggah ke Play Console)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload hasil APK (untuk instal & tes manual di HP)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
