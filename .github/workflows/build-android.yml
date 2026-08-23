@@ -1,11 +1,12 @@
 name: Build Signed Android App Bundle
 
-# Jalan otomatis tiap kali ada push ke branch main, dan juga bisa dijalankan manual
-# lewat tab "Actions" di GitHub (tombol "Run workflow").
 on:
   push:
     branches: [ main ]
   workflow_dispatch: {}
+
+env:
+  APP_DIR: kas-kelas-capacitor
 
 jobs:
   build:
@@ -26,17 +27,20 @@ jobs:
           java-version: '17'
 
       - name: Install dependency npm
+        working-directory: ${{ env.APP_DIR }}
         run: npm install
 
       - name: Sync Capacitor -> Android
+        working-directory: ${{ env.APP_DIR }}
         run: npx cap sync android
 
       - name: Siapkan keystore dari GitHub Secret
+        working-directory: ${{ env.APP_DIR }}
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release-key.jks
 
       - name: Build Signed App Bundle (.aab)
-        working-directory: android
+        working-directory: ${{ env.APP_DIR }}/android
         env:
           KEYSTORE_PATH: app/release-key.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -47,7 +51,7 @@ jobs:
           ./gradlew bundleRelease
 
       - name: Build Signed APK (opsional, untuk uji coba manual di HP)
-        working-directory: android
+        working-directory: ${{ env.APP_DIR }}/android
         env:
           KEYSTORE_PATH: app/release-key.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -57,16 +61,17 @@ jobs:
 
       - name: Hapus file keystore sementara
         if: always()
+        working-directory: ${{ env.APP_DIR }}
         run: rm -f android/app/release-key.jks
 
       - name: Upload hasil AAB (untuk diunggah ke Play Console)
         uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          path: ${{ env.APP_DIR }}/android/app/build/outputs/bundle/release/app-release.aab
 
       - name: Upload hasil APK (untuk instal & tes manual di HP)
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: ${{ env.APP_DIR }}/android/app/build/outputs/apk/release/app-release.apk
