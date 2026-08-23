@@ -1,0 +1,12 @@
+{
+  "appId": "com.kaskelas.app",
+  "appName": "Buku Kas Kelas",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
