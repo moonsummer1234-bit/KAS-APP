@@ -19,8 +19,6 @@ android {
 
     // Konfigurasi signing otomatis: dibaca dari environment variable yang diisi
     // lewat GitHub Actions Secrets (lihat .github/workflows/build-android.yml).
-    // Jika environment variable tidak ada (misalnya build biasa di laptop tanpa
-    // di-setup), release build tetap jalan tanpa signing (unsigned) agar tidak error.
     signingConfigs {
         release {
             def ksPath = System.getenv("KEYSTORE_PATH")
